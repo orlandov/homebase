@@ -1,0 +1,65 @@
+#!/bin/bash
+
+echo "Using $HOME as home directory";
+if [[ -z "$HOME" ]]; then
+    HOME=~
+fi
+
+scriptlnpath="$HOME/.homebase"
+
+abs() {
+    echo $(cd `dirname $1` && pwd)
+}
+
+script=$0
+scriptpath=$(abs $script)
+
+echo scriptpath = $scriptpath
+
+cd $scriptpath
+
+source $scriptpath/lib/common.sh
+
+while getopts fdh OPT; do
+    case "$OPT" in
+        f) opt_force=1;;
+        d) set -o xtrace;;
+        h) opt_help=1;;
+        [?]) warn "Usage: $0 [-s] [-d seplist] file ..."
+            exit 1;;
+    esac
+done
+shift $((OPTIND - 1))
+
+if [[ -n "$opt_force" ]]; then
+    warn "force mode enabled";
+fi
+
+command="$1"
+if [[ $command == "install" ]]; then
+    profile="$2"
+    profilepath="$scriptlnpath/profiles/$profile"
+
+    if [[ -z "$profile" ]]; then
+        fatal "No profile specified."
+    fi
+
+    source $scriptlnpath/lib/install.sh
+elif [[ "$command" == "init" ]]; then
+    if [[ -e "$scriptlnpath"  && -z "$opt_force" ]]; then
+        fatal "Homebase already set up"
+        return;
+    fi
+
+    if [[ -e "$scriptlnpath"  && -n "$opt_force" ]]; then
+        rm $scriptlnpath
+    fi
+
+    #pushd $HOME
+    ln -s $(relpath $HOME $scriptpath) $scriptlnpath
+    #popd
+else
+    fatal "No command specified."
+fi
+
+
